@@ -1,0 +1,51 @@
+"""
+zombie_knight.py
+
+This is the main game file, where all the classes are combined and the game itself is initialized and ran
+"""
+import pygame, random
+
+import game
+from game import Game
+
+"""GAME SETUP"""
+#Initialize Pygame
+pygame.init()
+
+#use 2d vectors
+VECTOR = pygame.math.Vector2
+
+#Set Display Surface
+##tile height is 32x32; 40 tiles wide & 23 tiles high
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 736
+DISPLAY_SURFACE = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption("Zombie Knight!")
+
+#Set FPS and Clock
+FPS = 60
+CLOCK = pygame.time.Clock()
+
+#Load in BG image
+background_image = pygame.transform.scale(pygame.image.load("../10_1_zombie_knight/assets/images/background.png"),
+                                          (WINDOW_WIDTH, WINDOW_HEIGHT))
+background_rect = background_image.get_rect()
+background_rect.topleft = (0,0)
+
+"""MAIN GAME LOOP"""
+running = True
+while running:
+    #Check to see if user wants to quit
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    #blit the background
+    DISPLAY_SURFACE.blit(background_image, background_rect)
+
+    #update display and tick clock
+    pygame.display.update()
+    CLOCK.tick(FPS)
+
+#end the game
+pygame.quit()
