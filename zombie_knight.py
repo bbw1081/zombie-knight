@@ -1,12 +1,12 @@
-"""
-zombie_knight.py
-
-This is the main game file, where all the classes are combined and the game itself is initialized and ran
-"""
 import pygame, random
-
-import game
 from game import Game
+from tile import Tile
+from player import Player
+from bullet import Bullet
+from zombie import Zombie
+from ruby_maker import RubyMaker
+from ruby import Ruby
+from portal import Portal
 
 """GAME SETUP"""
 #Initialize Pygame

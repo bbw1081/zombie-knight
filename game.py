@@ -1,12 +1,8 @@
-"""
-game.py
-
-Holds the game class
-"""
 import pygame, random
 
-class Game():
+class Game:
     """A class to help manage gameplay"""
+
     def __init__(self):
         """Initialize the game"""
         pass
