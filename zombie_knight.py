@@ -1,11 +1,4 @@
 import pygame, random
-from tile import Tile
-from player import Player
-from bullet import Bullet
-from zombie import Zombie
-from ruby_maker import RubyMaker
-from ruby import Ruby
-from portal import Portal
 
 """GAME SETUP"""
 #Initialize Pygame
@@ -25,6 +18,7 @@ pygame.display.set_caption("Zombie Knight!")
 FPS = 60
 CLOCK = pygame.time.Clock()
 
+#DEFINE CLASSES
 class Game:
     """A class to help manage gameplay"""
 
@@ -114,6 +108,418 @@ class Game:
         """reset the game"""
         pass
 
+class Player(pygame.sprite.Sprite):
+    """A class the user controls"""
+
+    def __init__(self, x, y, platform_group, portal_group, bullet_group):
+        """initialize the player"""
+        super().__init__()
+
+        #set constant variables
+        self.HORIZONTAL_ACCEL = 2
+        self.HORIZONTAL_FRICTION = 0.15
+        self.VERTICAL_ACCEL = 0.8 #gravity
+        self.VERTICAL_JUMP_SPEED = 18 #determines how high the player can jump
+        self.STARTING_HEALTH = 100
+
+        #create animation lists
+        self.move_right_sprites = []
+        self.move_left_sprites = []
+        self.idle_right_sprites = []
+        self.idle_left_sprites = []
+        self.jump_right_sprites = []
+        self.jump_left_sprites = []
+        self.attack_right_sprites = []
+        self.attack_left_sprites = []
+
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (1).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (2).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (3).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (4).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (5).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (6).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (7).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (8).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (9).png"), (64,64)))
+        self.move_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/run/Run (10).png"), (64,64)))
+
+        for sprite in self.move_right_sprites:
+            self.move_left_sprites.append(pygame.transform.flip(sprite, True, False))
+
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (1).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (2).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (3).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (4).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (5).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (6).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (7).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (8).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (9).png"), (64,64)))
+        self.idle_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/idle/Idle (10).png"), (64,64)))
+
+        for sprite in self.idle_right_sprites:
+            self.idle_left_sprites.append(pygame.transform.flip(sprite, True, False))
+
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (1).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (2).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (3).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (4).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (5).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (6).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (7).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (8).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (9).png"), (64,64)))
+        self.jump_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/jump/Jump (10).png"), (64,64)))
+
+        for sprite in self.jump_right_sprites:
+            self.jump_left_sprites.append(pygame.transform.flip(sprite, True, False))
+
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (1).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (2).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (3).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (4).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (5).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (6).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (7).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (8).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (9).png"), (64,64)))
+        self.attack_right_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/player/attack/Attack (10).png"), (64,64)))
+
+        for sprite in self.attack_right_sprites:
+            self.attack_left_sprites.append(pygame.transform.flip(sprite, True, False))
+
+        #load image and get rect
+        self.current_sprite = 0
+        self.image = self.idle_right_sprites[self.current_sprite]
+        self.rect = self.image.get_rect()
+        self.rect.bottomleft = (x, y)
+
+        #attach sprite groups
+        self.platform_group = platform_group
+        self.portal_group = portal_group
+        self.bullet_group = bullet_group
+
+        #animation booleans
+        self.animate_jump = False
+        self.animate_attack = False
+
+        #load in sounds
+        self.jump_sound = pygame.mixer.Sound("assets/sounds/jump_sound.wav")
+        self.slash_sound = pygame.mixer.Sound("assets/sounds/slash_sound.wav")
+        self.portal_sound = pygame.mixer.Sound("assets/sounds/portal_sound.wav")
+        self.hit_sound = pygame.mixer.Sound("assets/sounds/player_hit.wav")
+
+        #kinematics vectors
+        self.position = VECTOR(x, y)
+        self.velocity = VECTOR(0, 0)
+        self.accel = VECTOR(0, self.VERTICAL_ACCEL) #gravity is affecting
+
+        #set initial player values
+        self.health = self.STARTING_HEALTH
+        self.starting_x = x
+        self.starting_y = y
+
+    def update(self):
+        """update the player"""
+        self.move()
+        self.check_collisions()
+        self.check_animations()
+
+    def move(self):
+        """move the player"""
+        #set the acceleration vector
+        self.accel = VECTOR(0, self.VERTICAL_ACCEL)
+
+        #check for key press and set horizontal acceleration
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            self.accel.x = -1 * self.HORIZONTAL_ACCEL
+        elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            self.accel.x = self.HORIZONTAL_ACCEL
+
+        #calculate new kinematics values
+        self.accel.x -= self.velocity.x * self.HORIZONTAL_FRICTION
+        self.velocity += self.accel
+        self.position += self.velocity + 0.5*self.accel
+
+        #update rect and add wrap-around movement
+        if self.position.x < 0:
+            self.position.x = WINDOW_WIDTH
+        elif self.position.x > WINDOW_WIDTH:
+            self.position.x = 0
+
+        self.rect.bottomleft = self.position
+
+    def check_collisions(self):
+        """checks for collisions with platforms and portals"""
+        #collision check between player and platforms when falling
+        if self.velocity.y > 0: #moving down
+            collided_platforms = pygame.sprite.spritecollide(self, self.platform_group, False)
+            if collided_platforms:
+                self.position.y = collided_platforms[0].rect.top + 1
+                self.velocity.y = 0
+
+        #collisions check between player and platforms when jumping
+        if self.velocity.y < 0: #moving up
+            collided_platforms = pygame.sprite.spritecollide(self, self.platform_group, False)
+            if collided_platforms:
+                self.velocity.y = 0
+                while pygame.sprite.spritecollide(self, self.platform_group, False):
+                    self.position.y += 1
+                    self.rect.bottomleft = self.position
+
+        #collision check for portals
+        if pygame.sprite.spritecollide(self, self.portal_group, False):
+            self.portal_sound.play()
+            #determine which portal the player should move to
+            #first determine left and right
+            if self.position.x > WINDOW_WIDTH//2:
+                self.position.x = 86
+            else:
+                self.position.x = WINDOW_WIDTH - 150
+            #now determine top and bottom
+            if self.position.y > WINDOW_HEIGHT//2:
+                self.position.y = 64
+            else:
+                self.position.y = WINDOW_HEIGHT - 132
+
+    def check_animations(self):
+        """check for jump or fire animations"""
+        pass
+
+    def jump(self):
+        """make the player jump if on a platform"""
+        #only jump if on a platform
+        if pygame.sprite.spritecollide(self, self.platform_group, False):
+            self.jump_sound.play()
+            self.velocity.y = -1 * self.VERTICAL_JUMP_SPEED
+
+    def fire(self):
+        """fire a projectile"""
+        pass
+
+    def reset(self):
+        """reset the player's position"""
+        pass
+
+    def animate(self):
+        """animate the player's actions"""
+        pass
+
+class Portal(pygame.sprite.Sprite):
+    """A class that if collided with will teleport you"""
+
+    def __init__(self, x, y, color, portal_group):
+        """initialize the portal"""
+        super().__init__()
+
+        #create a list for animation frames
+        self.portal_sprites = []
+        if color == "green": #green portal
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile000.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile001.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile002.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile003.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile004.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile005.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile006.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile007.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile008.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile009.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile010.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile011.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile012.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile013.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile014.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile015.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile016.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile017.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile018.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile019.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile020.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/green/tile021.png"), (72,72)))
+        else: #purple portal
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile000.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile001.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile002.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile003.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile004.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile005.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile006.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile007.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile008.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile009.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile010.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile011.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile012.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile013.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile014.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile015.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile016.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile017.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile018.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile019.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile020.png"), (72,72)))
+            self.portal_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/portals/purple/tile021.png"), (72,72)))
+
+        #load an image and get a rect
+        self.current_sprite = random.randint(0, len(self.portal_sprites) - 1)
+        self.image = self.portal_sprites[self.current_sprite]
+        self.rect = self.image.get_rect()
+        self.rect.bottomleft = (x, y)
+
+        portal_group.add(self)
+
+    def update(self):
+        """update the portal"""
+        self.animate(self.portal_sprites, 0.2)
+
+    def animate(self, sprite_list, speed):
+        """animate the portal"""
+        if self.current_sprite < len(sprite_list) - 1:
+            self.current_sprite += speed
+        else:
+            self.current_sprite = 0
+
+        self.image = sprite_list[int(self.current_sprite)]
+
+class Bullet(pygame.sprite.Sprite):
+    """A projectile fired by the player"""
+
+    def __init__(self):
+        """initialize the bullet"""
+        pass
+
+    def update(self):
+        """update the bullet"""
+        pass
+
+class Ruby(pygame.sprite.Sprite):
+    """A class the player must collect to earn points and health"""
+
+    def __init__(self):
+        """initialize the ruby"""
+        pass
+
+    def update(self):
+        """update the ruby"""
+        pass
+
+    def move(self):
+        """move the ruby"""
+        pass
+
+    def check_collisions(self):
+        """check for collisions with platforms and portals"""
+        pass
+
+    def animate(self):
+        """Animate the ruby"""
+        pass
+
+class RubyMaker(pygame.sprite.Sprite):
+    """A tile that is animated. A ruby will be generated here"""
+
+    def __init__(self, x, y, main_group):
+        """initialize the ruby maker"""
+        super().__init__()
+
+        #load animation frames
+        self.ruby_sprites = []
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile000.png"),
+                                                        (64, 64)))
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile001.png"),
+                                                        (64, 64)))
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile002.png"),
+                                                        (64, 64)))
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile003.png"),
+                                                        (64, 64)))
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile004.png"),
+                                                        (64, 64)))
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile005.png"),
+                                                        (64, 64)))
+        self.ruby_sprites.append(pygame.transform.scale(pygame.image.load("assets/images/ruby/tile006.png"),
+                                                        (64, 64)))
+
+        #load image and get rect
+        self.current_sprite = 0
+        self.image = self.ruby_sprites[self.current_sprite]
+        self.rect = self.image.get_rect()
+        self.rect.bottomleft = (x, y)
+
+        #add to the main group
+        main_group.add(self)
+
+
+    def update(self):
+        """update the ruby maker"""
+        self.animate(self.ruby_sprites, .25)
+
+    def animate(self, sprite_list, speed):
+        """animate the ruby maker"""
+        if self.current_sprite < len(sprite_list) - 1:
+            self.current_sprite += speed
+        else:
+            self.current_sprite = 0
+
+        self.image = sprite_list[int(self.current_sprite)]
+
+class Tile(pygame.sprite.Sprite):
+    """A class to represent a tile in the display"""
+
+    def __init__(self, x, y, image_int, main_group, sub_group=None):
+        """create the tile"""
+        super().__init__()
+        #load in image and add it to the subgroup
+        if image_int == 1: #dirt image
+            self.image = pygame.transform.scale(pygame.image.load("assets/images/tiles/Tile (1).png"), (32, 32))
+        elif image_int == 2: #ground platform
+            self.image = pygame.transform.scale(pygame.image.load("assets/images/tiles/Tile (2).png"), (32, 32))
+            sub_group.add(self)
+        elif image_int == 3: #left platform
+            self.image = pygame.transform.scale(pygame.image.load("assets/images/tiles/Tile (3).png"), (32, 32))
+            sub_group.add(self)
+        elif image_int == 4: #middle platform
+            self.image = pygame.transform.scale(pygame.image.load("assets/images/tiles/Tile (4).png"), (32, 32))
+            sub_group.add(self)
+        elif image_int == 5: #right platform
+            self.image = pygame.transform.scale(pygame.image.load("assets/images/tiles/Tile (5).png"), (32, 32))
+            sub_group.add(self)
+
+        #add every tile to main group
+        main_group.add(self)
+
+        #get the rect and position in the display surface
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+
+class Zombie(pygame.sprite.Sprite):
+    """an enemy class that moves across the screen"""
+
+    def __init__(self):
+        """initialize the zombie"""
+        pass
+
+    def update(self):
+        """update the zombie"""
+        pass
+
+    def move(self):
+        """move the zombie"""
+        pass
+
+    def check_collisions(self):
+        """checks for collisions with platforms and portals"""
+        pass
+
+    def check_animations(self):
+        """check for death animation"""
+        pass
+
+    def animate(self):
+        """animate the zombie's actions"""
+        pass
+
 
 #Create Sprite Groups
 main_tile_group = pygame.sprite.Group()
@@ -148,7 +554,7 @@ tile_map = [
 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0],
@@ -186,7 +592,8 @@ for i in range(len(tile_map)):
             Portal(j*32, i*32, "purple", portal_group)
         #player
         elif tile_map[i][j] == 9:
-            pass
+            my_player = Player(j*32 - 32, i*32 + 32, platform_group, portal_group, bullet_group)
+            player_group.add(my_player)
 
 
 #Load in background image
@@ -206,6 +613,10 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                my_player.jump()
+
     #blit the background
     DISPLAY_SURFACE.blit(background_image, background_rect)
 
@@ -216,6 +627,9 @@ while running:
     #draw and update sprite groups
     portal_group.update()
     portal_group.draw(DISPLAY_SURFACE)
+
+    player_group.update()
+    player_group.draw(DISPLAY_SURFACE)
 
     #update and draw game
     my_game.update()
