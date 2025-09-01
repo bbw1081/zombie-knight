@@ -201,7 +201,7 @@ class Player(pygame.sprite.Sprite):
 
         #animation booleans
         self.animate_jump = False
-        self.animate_attack = False
+        self.animate_fire = False
 
         #load in sounds
         self.jump_sound = pygame.mixer.Sound("assets/sounds/jump_sound.wav")
@@ -234,8 +234,16 @@ class Player(pygame.sprite.Sprite):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.accel.x = -1 * self.HORIZONTAL_ACCEL
+            self.animate(self.move_left_sprites, 0.5)
         elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.accel.x = self.HORIZONTAL_ACCEL
+            self.animate(self.move_right_sprites, 0.5)
+        else:
+            if self.velocity.x > 0:
+                #animate right
+                self.animate(self.idle_right_sprites, 0.5)
+            else:
+                self.animate(self.idle_left_sprites, 0.5)
 
         #calculate new kinematics values
         self.accel.x -= self.velocity.x * self.HORIZONTAL_FRICTION
@@ -285,7 +293,19 @@ class Player(pygame.sprite.Sprite):
 
     def check_animations(self):
         """check for jump or fire animations"""
-        pass
+        #animate the player jump
+        if self.animate_jump:
+            if self.velocity.x > 0:
+                self.animate(self.jump_right_sprites, 0.1)
+            else:
+                self.animate(self.jump_left_sprites, 0.1)
+
+        #animate the player fire
+        if self.animate_fire:
+            if self.velocity.x > 0:
+                self.animate(self.attack_right_sprites, 0.25)
+            else:
+                self.animate(self.attack_left_sprites, 0.25)
 
     def jump(self):
         """make the player jump if on a platform"""
@@ -293,18 +313,34 @@ class Player(pygame.sprite.Sprite):
         if pygame.sprite.spritecollide(self, self.platform_group, False):
             self.jump_sound.play()
             self.velocity.y = -1 * self.VERTICAL_JUMP_SPEED
+            self.animate_jump = True
 
     def fire(self):
         """fire a projectile"""
-        pass
+        self.slash_sound.play()
+        Bullet(self.rect.centerx, self.rect.centery, self.bullet_group, self)
+        self.animate_fire = True
 
     def reset(self):
         """reset the player's position"""
-        pass
+        self.position = VECTOR(self.starting_x, self.starting_y)
+        self.rect.bottomleft = self.position
 
-    def animate(self):
+    def animate(self, sprite_list, speed):
         """animate the player's actions"""
-        pass
+        if self.current_sprite < len(sprite_list) - 1:
+            self.current_sprite += speed
+        else:
+            self.current_sprite = 0
+            #end jump animation
+            if self.animate_jump:
+                self.animate_jump = False
+
+            #end attack animation
+            if self.animate_fire:
+                self.animate_fire = False
+
+        self.image = sprite_list[int(self.current_sprite)]
 
 class Portal(pygame.sprite.Sprite):
     """A class that if collided with will teleport you"""
@@ -386,13 +422,35 @@ class Portal(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     """A projectile fired by the player"""
 
-    def __init__(self):
+    def __init__(self, x, y, bullet_group, player):
         """initialize the bullet"""
-        pass
+        super().__init__()
+
+        #set constant variables
+        self.VELOCITY = 20
+        self.RANGE = 500
+
+        #load image and get rect
+        if player.velocity.x > 0:
+            self.image = pygame.transform.scale(pygame.image.load("assets/images/player/slash.png"), (32, 32))
+        else:
+            self.image = pygame.transform.scale(pygame.transform.flip(
+                pygame.image.load("assets/images/player/slash.png"), True, False), (32, 32))
+            self.VELOCITY = -1 * self.VELOCITY
+
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+        self.starting_x = x
+        self.starting_y = y
+
+        bullet_group.add(self)
 
     def update(self):
         """update the bullet"""
-        pass
+        self.rect.x += self.VELOCITY
+        #if the bullet has passed the range, kill it
+        if abs(self.rect.x - self.starting_x) > self.RANGE:
+            self.kill()
 
 class Ruby(pygame.sprite.Sprite):
     """A class the player must collect to earn points and health"""
@@ -522,16 +580,16 @@ class Zombie(pygame.sprite.Sprite):
 
 
 #Create Sprite Groups
-main_tile_group = pygame.sprite.Group()
-platform_group = pygame.sprite.Group()
+my_main_tile_group = pygame.sprite.Group()
+my_platform_group = pygame.sprite.Group()
 
-player_group = pygame.sprite.Group()
-bullet_group = pygame.sprite.Group()
+my_player_group = pygame.sprite.Group()
+my_bullet_group = pygame.sprite.Group()
 
-zombie_group = pygame.sprite.Group()
+my_zombie_group = pygame.sprite.Group()
 
-portal_group = pygame.sprite.Group()
-ruby_group = pygame.sprite.Group()
+my_portal_group = pygame.sprite.Group()
+my_ruby_group = pygame.sprite.Group()
 
 #Create the tile map
 #0 --> no tile, 1 --> dirt tile, 2-5 --> platforms, 6 --> ruby maker, 7-8 --> portals, 9 --> player
@@ -569,31 +627,31 @@ for i in range(len(tile_map)):
     for j in range(len(tile_map[i])):
         #dirt tile
         if tile_map[i][j] == 1:
-            Tile(j*32, i*32, 1, main_tile_group)
+            Tile(j * 32, i * 32, 1, my_main_tile_group)
         #ground platform tile
         elif tile_map[i][j] == 2:
-            Tile(j*32, i*32, 2, main_tile_group, platform_group)
+            Tile(j * 32, i * 32, 2, my_main_tile_group, my_platform_group)
         #left platform tile
         elif tile_map[i][j] == 3:
-            Tile(j*32, i*32, 3, main_tile_group, platform_group)
+            Tile(j * 32, i * 32, 3, my_main_tile_group, my_platform_group)
         #middle platform tile
         elif tile_map[i][j] == 4:
-            Tile(j*32, i*32, 4, main_tile_group, platform_group)
+            Tile(j * 32, i * 32, 4, my_main_tile_group, my_platform_group)
         #right platform tile
         elif tile_map[i][j] == 5:
-            Tile(j*32, i*32, 5, main_tile_group, platform_group)
+            Tile(j * 32, i * 32, 5, my_main_tile_group, my_platform_group)
         #ruby maker
         elif tile_map[i][j] == 6:
-            RubyMaker(j*32, i*32, main_tile_group)
+            RubyMaker(j * 32, i * 32, my_main_tile_group)
         #portals
         elif tile_map[i][j] == 7:
-            Portal(j*32, i*32, "green", portal_group)
+            Portal(j * 32, i * 32, "green", my_portal_group)
         elif tile_map[i][j] == 8:
-            Portal(j*32, i*32, "purple", portal_group)
+            Portal(j * 32, i * 32, "purple", my_portal_group)
         #player
         elif tile_map[i][j] == 9:
-            my_player = Player(j*32 - 32, i*32 + 32, platform_group, portal_group, bullet_group)
-            player_group.add(my_player)
+            my_player = Player(j * 32 - 32, i * 32 + 32, my_platform_group, my_portal_group, my_bullet_group)
+            my_player_group.add(my_player)
 
 
 #Load in background image
@@ -616,20 +674,25 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 my_player.jump()
+            elif event.key == pygame.K_UP or event.key == pygame.K_w:
+                my_player.fire()
 
     #blit the background
     DISPLAY_SURFACE.blit(background_image, background_rect)
 
     #draw our tiles
-    main_tile_group.update()
-    main_tile_group.draw(DISPLAY_SURFACE)
+    my_main_tile_group.update()
+    my_main_tile_group.draw(DISPLAY_SURFACE)
 
     #draw and update sprite groups
-    portal_group.update()
-    portal_group.draw(DISPLAY_SURFACE)
+    my_portal_group.update()
+    my_portal_group.draw(DISPLAY_SURFACE)
 
-    player_group.update()
-    player_group.draw(DISPLAY_SURFACE)
+    my_player_group.update()
+    my_player_group.draw(DISPLAY_SURFACE)
+
+    my_bullet_group.update()
+    my_bullet_group.draw(DISPLAY_SURFACE)
 
     #update and draw game
     my_game.update()
