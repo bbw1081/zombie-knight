@@ -188,7 +188,7 @@ class Game:
         #pause the game
         self.pause_game("You survived the night!", "Press 'Enter' to continue...")
 
-    def pause_game(self, main_text, sub_text):
+    def pause_game(self, main_text, sub_text, version_text=None):
         """pause the game"""
         global running
 
@@ -212,9 +212,15 @@ class Game:
         DISPLAY_SURFACE.fill(BLACK)
         DISPLAY_SURFACE.blit(my_main_text, main_rect)
         DISPLAY_SURFACE.blit(my_sub_text, sub_rect)
+        if version_text:
+            my_version_text = self.HUD_font.render(version_text, True, WHITE)
+            version_rect = my_version_text.get_rect()
+            version_rect.bottomright = (WINDOW_WIDTH - 10, WINDOW_HEIGHT - 10)
+            DISPLAY_SURFACE.blit(my_version_text, version_rect)
+
         pygame.display.update()
 
-        #pause game until user hits enter or quite
+        #pause game until user hits enter or quits
         is_paused = True
         while is_paused:
             for event in pygame.event.get():
@@ -223,8 +229,9 @@ class Game:
                     if event.key == pygame.K_RETURN:
                         is_paused = False
                         pygame.mixer.music.unpause()
+
                 #player wants to quit
-                elif event.type == pygame.QUIT:
+                if event.type == pygame.QUIT:
                     is_paused = False
                     running = False
                     pygame.mixer.music.stop()
@@ -1160,7 +1167,7 @@ background_rect.topleft = (0,0)
 
 #create a game
 my_game = Game(my_player, my_zombie_group, my_platform_group, my_portal_group, my_bullet_group, my_ruby_group)
-my_game.pause_game("Zombie Knight!", "Press 'Enter' to begin")
+my_game.pause_game("Zombie Knight!", "Press 'Enter' to begin", "v1.0.1")
 pygame.mixer.music.play(-1, 0.0)
 
 """MAIN GAME LOOP"""
