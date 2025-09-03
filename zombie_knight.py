@@ -22,20 +22,30 @@ CLOCK = pygame.time.Clock()
 class Game:
     """A class to help manage gameplay"""
 
-    def __init__(self):
+    def __init__(self, player, zombie_group, platform_group, portal_group, bullet_group, ruby_group):
         """Initialize the game"""
         #set constant variables
         self.STARTING_ROUND_TIME = 30
+        self.STARTING_ZOMBIE_CREATION_TIME = 5
 
         #set game values
         self.score = 0
         self.round_number = 1
         self.frame_count = 0
         self.round_time = self.STARTING_ROUND_TIME
+        self.zombie_creation_time = self.STARTING_ZOMBIE_CREATION_TIME
 
         #load in fonts
         self.title_font = pygame.font.Font("assets/fonts/Poultrygeist.ttf", 48)
         self.HUD_font = pygame.font.Font("assets/fonts/Pixel.ttf", 24)
+
+        #attach groups and sprites
+        self.player = player
+        self.zombie_group = zombie_group
+        self.platform_group = platform_group
+        self.portal_group = portal_group
+        self.bullet_group = bullet_group
+        self.ruby_group = ruby_group
 
     def update(self):
         """update the game"""
@@ -44,6 +54,12 @@ class Game:
         if self.frame_count % FPS == 0:
             self.round_time -= 1
             self.frame_count = 0
+        
+        #check for gameplay collisions
+        self.check_collisions()
+
+        #add zombies if zombie creation time is met
+        self.add_zombie()
 
     def draw(self):
         """draw the game HUD"""
@@ -56,7 +72,7 @@ class Game:
         score_rect = score_text.get_rect()
         score_rect.topleft = (10, WINDOW_HEIGHT - 50)
 
-        health_text = self.HUD_font.render("Health: " + str(100), True, WHITE)
+        health_text = self.HUD_font.render("Health: " + str(self.player.health), True, WHITE)
         health_rect = health_text.get_rect()
         health_rect.topleft = (10, WINDOW_HEIGHT - 25)
 
@@ -82,11 +98,39 @@ class Game:
 
     def add_zombie(self):
         """add a zombie to the game"""
-        pass
+        #check to add a zombie every second
+        if self.frame_count % FPS == 0:
+            #only add a zombie if zombie creation time has passed
+            if self.round_time % self.zombie_creation_time == 0:
+                self.zombie_group.add(Zombie(self.platform_group, self.portal_group, self.round_number, 5 + self.round_number))
 
     def check_collisions(self):
         """Check collisions that affect gameplay"""
-        pass
+        #see if any bullet hit any zombie
+        collision_dict = pygame.sprite.groupcollide(self.bullet_group, self.zombie_group, True, False)
+        if collision_dict:
+            for zombies in collision_dict.values():
+                for zombie in zombies:
+                    zombie.hit_sound.play()
+                    zombie.is_dead = True
+                    zombie.animate_death = True
+
+        #check for collisions between player and zombie
+        collision_list = pygame.sprite.spritecollide(self.player, self.zombie_group, False)
+        if collision_list:
+            for zombie in collision_list:
+                if zombie.is_dead:
+                    #kill the zombie
+                    zombie.kick_sound.play()
+                    zombie.kill()
+                    self.score += 25
+                else:
+                    #take damage
+                    self.player.health -= 20
+                    self.player.hit_sound.play()
+                    #move the player to not continually take damage
+                    self.player.position.x -= 256 * zombie.direction
+                    self.player.rect.bottomleft = self.player.position
 
     def check_round_completion(self):
         """Check if the player survived a night"""
@@ -556,7 +600,7 @@ class Zombie(pygame.sprite.Sprite):
 
     def __init__(self, platform_group, portal_group, min_speed, max_speed):
         """initialize the zombie"""
-        super.__init__()
+        super().__init__()
 
         #set constant variables
         self.VERTICAL_ACCEL = 3 #gravity
@@ -749,24 +793,103 @@ class Zombie(pygame.sprite.Sprite):
 
     def update(self):
         """update the zombie"""
-        pass
+        self.move()
+        self.check_collisions()
+        self.check_animations()
+
+        #determine when the zombie should rise from the dead
+        if self.is_dead:
+            self.frame_count += 1
+            if self.frame_count % FPS == 0:
+                self.round_time += 1
+                if self.round_time == self.RISE_TIME:
+                    self.animate_rise = True
+                    #when the zombie died, the image was kept at the last image
+                    #when it rises we want to start at index 0 of the rise_sprites list
+                    self.current_sprite = 0
 
     def move(self):
         """move the zombie"""
-        pass
+        if not self.is_dead:
+            #animate the zombie walking
+            if self.direction == -1:
+                self.animate(self.walk_left_sprites, 0.5)
+            else:
+                self.animate(self.walk_right_sprites, 0.5)
+
+            #the accel doesn't change, so we don't need to update the accel vector
+            #calculate new kinematics values
+            self.velocity += self.accel
+            self.position += self.velocity + 0.5*self.accel
+
+            #update rect based on new kinematics values and add wrap-around movement
+            if self.position.x < 0:
+                self.position.x = WINDOW_WIDTH
+            elif self.position.x > WINDOW_WIDTH:
+                self.position.x = 0
+
+            self.rect.bottomleft = self.position
 
     def check_collisions(self):
         """checks for collisions with platforms and portals"""
-        pass
+        #collision check between player and zombie when falling
+        collided_platforms = pygame.sprite.spritecollide(self, self.platform_group, False)
+        if collided_platforms:
+            self.position.y = collided_platforms[0].rect.top + 1
+            self.velocity.y = 0
+
+        #collision check for portals
+        if pygame.sprite.spritecollide(self, self.portal_group, False):
+            self.portal_sound.play()
+            #determine which portal the zombie should move to
+            #first determine left and right
+            if self.position.x > WINDOW_WIDTH//2:
+                self.position.x = 86
+            else:
+                self.position.x = WINDOW_WIDTH - 150
+            #now determine top and bottom
+            if self.position.y > WINDOW_HEIGHT//2:
+                self.position.y = 64
+            else:
+                self.position.y = WINDOW_HEIGHT - 132
 
     def check_animations(self):
         """check for death animation"""
-        pass
+        #animate the zombie death
+        if self.animate_death:
+            if self.direction == 1:
+                self.animate(self.die_right_sprites, .095)
+            else:
+                self.animate(self.die_left_sprites, .095)
 
-    def animate(self):
+        #animate the zombie rise
+        if self.animate_rise:
+            if self.direction == 1:
+                self.animate(self.rise_right_sprites, .095)
+            else:
+                self.animate(self.rise_left_sprites, .095)
+        
+
+    def animate(self, sprite_list, speed):
         """animate the zombie's actions"""
-        pass
+        if self.current_sprite < len(sprite_list) - 1:
+            self.current_sprite += speed
+        else:
+            self.current_sprite = 0
 
+            #end death animation
+            if self.animate_death:
+                self.current_sprite = len(sprite_list) - 1
+                self.animate_death = False
+
+            #end rise animation
+            if self.animate_rise:
+                self.animate_rise = False
+                self.is_dead = False
+                self.frame_count = 0
+                self.round_time = 0
+
+        self.image = sprite_list[int(self.current_sprite)]
 
 #Create Sprite Groups
 my_main_tile_group = pygame.sprite.Group()
@@ -850,7 +973,7 @@ background_rect = background_image.get_rect()
 background_rect.topleft = (0,0)
 
 #create a game
-my_game = Game()
+my_game = Game(my_player, my_zombie_group, my_platform_group, my_portal_group, my_bullet_group, my_ruby_group)
 
 """MAIN GAME LOOP"""
 running = True
@@ -865,6 +988,9 @@ while running:
                 my_player.jump()
             elif event.key == pygame.K_UP or event.key == pygame.K_w:
                 my_player.fire()
+            # #rain zombies DEBUG
+            # elif event.key == pygame.K_RETURN:
+            #     my_zombie_group.add(Zombie(my_platform_group, my_portal_group, 2, 7))
 
     #blit the background
     DISPLAY_SURFACE.blit(background_image, background_rect)
@@ -882,6 +1008,9 @@ while running:
 
     my_bullet_group.update()
     my_bullet_group.draw(DISPLAY_SURFACE)
+
+    my_zombie_group.update()
+    my_zombie_group.draw(DISPLAY_SURFACE)
 
     #update and draw game
     my_game.update()
